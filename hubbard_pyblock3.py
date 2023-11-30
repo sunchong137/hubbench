@@ -45,7 +45,10 @@ def hubbard1d_dmrg(nsite, U, nelec=None, filling=1.0, pbc=False,
         nelec = int(nsite * filling + 1e-10)
         if abs(nelec/nsite - filling) > 1e-5:
             print("WARNING: The filling is changed to {:1.2f}".format(nelec/nsite))
-        spin = 0
+        if nelec % 2 == 0:
+            spin = 0
+        else:
+            spin = 1
     else:
         try:
             neleca, nelecb = nelec
@@ -81,38 +84,8 @@ def hubbard1d_dmrg(nsite, U, nelec=None, filling=1.0, pbc=False,
         noises = list(np.logspace(np.log(max_noise), -16, nsweeps//2, endpoint=True)) + [0.0]
 
     # run DMRG
-    dmrg = MPE(mps, ham_mpo, mps).dmrg(bdims=bdims, noises=noises, dav_thrds=None, iprint=1, n_sweeps=nsweeps)
+    dmrg = MPE(mps, ham_mpo, mps).dmrg(bdims=bdims, noises=noises, dav_thrds=None, iprint=0, n_sweeps=nsweeps)
     energy = dmrg.energies[-1]
     print("Total energy: {:2.6f}; Energy per site: {:2.6f}".format(energy, energy/nsite))
     return energy, mps, ham_mpo
 
-
-def spinless_dmrg():
-    pass 
-
-def compol_prod(mps, nsite, nelec, x0=0.0, max_bdim=400, cutoff=1e-8, tol=1e-8):
-
-    ket_mps = np.copy(mps)
-    fcidump = FCIDUMP(pg='c1', n_sites=nsite, n_elec=nelec, twos=0, ipg=0, orb_sym=[0] * nsite)
-    operator = Hamiltonian(fcidump, flat=True)
-    for site in range(nsite):
-        coeff = np.exp(2.j*Pi*(site-x0)/nsite)-1.0
-        # spin up
-        def generate_terms(nsites, c, d): # up term
-            yield c[site, 0] * d[site, 0]
-        mpo = operator.build_mpo(generate_terms, cutoff=cutoff).to_sparse()
-        ket_mps += mpo @ ket_mps * coeff    
-        ket_mps, c_err = ket_mps.compress(max_bond_dim=max_bdim, cutoff=cutoff)
-        if c_err > tol:
-            print("WARNING: compression error is {:0.4E}, greater than {:0.4E}".format(c_err, tol))
-        # spin-down
-        def generate_terms(nsites, c, d): # up term
-            yield c[site, 1] * d[site, 1]
-        mpo = operator.build_mpo(generate_terms, cutoff=cutoff).to_sparse()
-        ket_mps += mpo @ ket_mps * coeff
-        ket_mps, c_err = ket_mps.compress(max_bond_dim=max_bdim, cutoff=cutoff)
-        if c_err > tol:
-            print("WARNING: compression error is {:0.4E}, greater than {:0.4E}".format(c_err, tol))
-
-    Z = np.dot(mps.conj(), ket_mps)
-    return Z #np.linalg.norm(Z)
