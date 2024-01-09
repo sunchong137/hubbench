@@ -8,8 +8,12 @@ Dependencies:
 - Bethe Ansatz only depends on Numpy and Scipy.
 - FCI calculation depends on PySCF.
 - DMRG depends on PyBlock3 or Block2.
+One can install the latest version from source by
 
-All above packages can be installed with `pip`.
+`pip install block2==0.5.3rc5 --extra-index-url=https://block-hczhai.github.io/block2-preview/pypi/`
+
+Make sure to go to the GitHub to check the latest version!
+
 
 2D Data
 -------
